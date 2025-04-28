@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Rastreamento de Carros - Concessionária</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CSS do Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #map {
+      height: 100%;
+      width: calc(100% - 250px);
+      float: right;
+    }
+
+    #sidebar {
+      width: 250px;
+      height: 100%;
+      background-color: #f8f9fa;
+      padding: 15px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      position: fixed;
+      left: 0;
+      top: 0;
+      border-right: 1px solid #ccc;
+    }
+
+    #sidebar h2 {
+      text-align: center;
+    }
+
+    .car-info {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .car-info:hover {
+      background: #e2e6ea;
+    }
+
+    .car-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="sidebar">
+    <h2>Veículos</h2>
+    <div id="carList"></div>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- JS do Leaflet -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+    // Inicializar o mapa
+    const map = L.map('map').setView([-23.5505, -46.6333], 12);
+
+    // Tile layer do mapa
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Lista de carros
+    const cars = [
+      { name: 'Onix', lat: -23.5505, lng: -46.6333 },
+      { name: 'HB20', lat: -23.5520, lng: -46.6390 },
+      { name: 'Corolla', lat: -23.5450, lng: -46.6300 },
+      { name: 'Civic', lat: -23.5490, lng: -46.6250 },
+      { name: 'Argo', lat: -23.5600, lng: -46.6400 },
+      { name: 'Polo', lat: -23.5475, lng: -46.6375 },
+      { name: 'Compass', lat: -23.5535, lng: -46.6295 },
+      { name: 'Renegade', lat: -23.5410, lng: -46.6280 },
+      { name: 'Tracker', lat: -23.5560, lng: -46.6350 },
+      { name: 'Kwid', lat: -23.5525, lng: -46.6415 },
+      { name: 'Creta', lat: -23.5480, lng: -46.6320 },
+    ];
+
+    const markers = {};
+    const carElements = {};
+
+    const carList = document.getElementById('carList');
+
+    // Inicializar os carros
+    cars.forEach((car, index) => {
+      car.speed = Math.random() * 40 + 20; // Velocidade entre 20km/h e 60km/h
+      car.direction = Math.random() * 360; // Direção aleatória
+      car.status = "Movendo";
+
+      // Ícone padrão
+      const marker = L.marker([car.lat, car.lng])
+        .addTo(map)
+        .bindTooltip(car.name, { permanent: true, direction: 'top', offset: [0, -15] })
+        .openTooltip();
+
+      markers[car.name] = marker;
+
+      // Criar item no menu lateral
+      const carDiv = document.createElement('div');
+      carDiv.className = 'car-info';
+      carDiv.id = `car-${car.name}`;
+      carDiv.innerHTML = `
+        <div class="car-name">${car.name}</div>
+        Velocidade: ${car.speed.toFixed(1)} km/h<br>
+        Latitude: ${car.lat.toFixed(5)}<br>
+        Longitude: ${car.lng.toFixed(5)}<br>
+        Status: ${car.status}
+      `;
+
+      // Quando clicar no carro no menu
+      carDiv.addEventListener('click', () => {
+        map.setView([car.lat, car.lng], 16); // Aproxima o mapa
+        markers[car.name].openPopup(); // Opcional: poderia abrir popup também se quiser
+      });
+
+      carElements[car.name] = carDiv;
+      carList.appendChild(carDiv);
+    });
+
+    // Simular movimentação
+    function moveCars() {
+      cars.forEach(car => {
+        if (Math.random() < 0.02) { 
+          car.status = car.status === "Parado" ? "Movendo" : "Parado";
+        }
+
+        if (car.status === "Movendo") {
+          const rad = car.direction * Math.PI / 180;
+          const distance = (car.speed / 3600) / 111 * 1.5;
+          car.lat += distance * Math.cos(rad);
+          car.lng += distance * Math.sin(rad);
+
+          markers[car.name].setLatLng([car.lat, car.lng]);
+
+          // Atualizar painel lateral
+          carElements[car.name].innerHTML = `
+            <div class="car-name">${car.name}</div>
+            Velocidade: ${car.speed.toFixed(1)} km/h<br>
+            Latitude: ${car.lat.toFixed(5)}<br>
+            Longitude: ${car.lng.toFixed(5)}<br>
+            Status: ${car.status}
+          `;
+        }
+      });
+    }
+
+    setInterval(moveCars, 1000); // Atualizar a cada 1 segundo
+  </script>
+
+</body>
+</html>
