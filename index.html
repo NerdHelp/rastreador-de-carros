@@ -9,18 +9,29 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
   <style>
-    body, html {
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
       height: 100%;
-      overflow: hidden;
       font-family: Arial, sans-serif;
     }
 
-    #map {
-      height: 100%;
-      width: calc(100% - 250px);
-      float: right;
+    #menu-toggle {
+      display: none;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 999;
     }
 
     #sidebar {
@@ -28,20 +39,29 @@
       height: 100%;
       background-color: #f8f9fa;
       padding: 15px;
-      box-sizing: border-box;
       overflow-y: auto;
       position: fixed;
       left: 0;
       top: 0;
       border-right: 1px solid #ccc;
+      transition: all 0.3s ease;
+      z-index: 998;
+    }
+
+    #map {
+      margin-left: 250px;
+      height: 100%;
+      width: calc(100% - 250px);
+      transition: all 0.3s ease;
     }
 
     #sidebar h2 {
       text-align: center;
+      margin-bottom: 10px;
     }
 
     .car-info {
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       padding: 10px;
       background: #fff;
       border-radius: 8px;
@@ -58,13 +78,47 @@
       font-weight: bold;
       margin-bottom: 5px;
     }
+
+    #searchBar {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    /* Responsivo para celular */
+    @media (max-width: 768px) {
+      #menu-toggle {
+        display: block;
+      }
+
+      #sidebar {
+        width: 100%;
+        height: auto;
+        position: absolute;
+        top: 50px;
+        left: 0;
+        display: none;
+        background-color: #f8f9fa;
+      }
+
+      #map {
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
 <body>
 
+  <button id="menu-toggle">Menu</button>
+
   <div id="sidebar">
     <h2>Veículos</h2>
+    <input type="text" id="searchBar" placeholder="Buscar veículo...">
     <div id="carList"></div>
   </div>
 
@@ -74,15 +128,12 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <script>
-    // Inicializar o mapa
     const map = L.map('map').setView([-23.5505, -46.6333], 12);
 
-    // Tile layer do mapa
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Lista de carros
     const cars = [
       { name: 'Onix', lat: -23.5505, lng: -46.6333 },
       { name: 'HB20', lat: -23.5520, lng: -46.6390 },
@@ -101,14 +152,15 @@
     const carElements = {};
 
     const carList = document.getElementById('carList');
+    const searchBar = document.getElementById('searchBar');
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menu-toggle');
 
-    // Inicializar os carros
     cars.forEach((car, index) => {
-      car.speed = Math.random() * 40 + 20; // Velocidade entre 20km/h e 60km/h
-      car.direction = Math.random() * 360; // Direção aleatória
+      car.speed = Math.random() * 40 + 20;
+      car.direction = Math.random() * 360;
       car.status = "Movendo";
 
-      // Ícone padrão
       const marker = L.marker([car.lat, car.lng])
         .addTo(map)
         .bindTooltip(car.name, { permanent: true, direction: 'top', offset: [0, -15] })
@@ -116,7 +168,6 @@
 
       markers[car.name] = marker;
 
-      // Criar item no menu lateral
       const carDiv = document.createElement('div');
       carDiv.className = 'car-info';
       carDiv.id = `car-${car.name}`;
@@ -128,20 +179,20 @@
         Status: ${car.status}
       `;
 
-      // Quando clicar no carro no menu
       carDiv.addEventListener('click', () => {
-        map.setView([car.lat, car.lng], 16); // Aproxima o mapa
-        markers[car.name].openPopup(); // Opcional: poderia abrir popup também se quiser
+        map.setView([car.lat, car.lng], 16);
+        if (window.innerWidth <= 768) {
+          sidebar.style.display = 'none';
+        }
       });
 
       carElements[car.name] = carDiv;
       carList.appendChild(carDiv);
     });
 
-    // Simular movimentação
     function moveCars() {
       cars.forEach(car => {
-        if (Math.random() < 0.02) { 
+        if (Math.random() < 0.02) {
           car.status = car.status === "Parado" ? "Movendo" : "Parado";
         }
 
@@ -153,7 +204,6 @@
 
           markers[car.name].setLatLng([car.lat, car.lng]);
 
-          // Atualizar painel lateral
           carElements[car.name].innerHTML = `
             <div class="car-name">${car.name}</div>
             Velocidade: ${car.speed.toFixed(1)} km/h<br>
@@ -165,7 +215,23 @@
       });
     }
 
-    setInterval(moveCars, 1000); // Atualizar a cada 1 segundo
+    setInterval(moveCars, 1000);
+
+    menuToggle.addEventListener('click', () => {
+      sidebar.style.display = sidebar.style.display === 'block' ? 'none' : 'block';
+    });
+
+    searchBar.addEventListener('input', () => {
+      const filter = searchBar.value.toLowerCase();
+      for (const carName in carElements) {
+        const carDiv = carElements[carName];
+        if (carName.toLowerCase().includes(filter)) {
+          carDiv.style.display = "block";
+        } else {
+          carDiv.style.display = "none";
+        }
+      }
+    });
   </script>
 
 </body>
